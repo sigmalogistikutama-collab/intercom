@@ -23,6 +23,23 @@ It includes setup steps, required runtime, first‑run decisions, and operationa
 Use the **Pear runtime only** (never native node).  
 Follow the steps in `SKILL.md` to install dependencies, run the admin peer, and join peers correctly.
 
+## Competition Fork Profile
+- Fork URL: `https://github.com/sigmalogistikutama-collab/intercom`
+- Profile ID: `readiness_pulse` (`Intercom Readiness Pulse`)
+- Naming mode: `namespaced`
+- Proof style: `sidechannel_focus`
+- Trac payout address: `trac1he92eudp9730m3sqgkgq8e2vswzjfenqvqnyajajr2wmced7r8fqzzwuaz`
+- Unique mutating command:
+  - `/tx --command '{"area":"contract_sync","readiness":"at_risk","note":"awaiting indexer warmup","op":"sync_readiness_pulse_sigmalogistikutama_collab_intercom"}'`
+- Unique query command:
+  - `/tx --command "peek_readiness_pulse_sigmalogistikutama_collab_intercom"`
+- Proof artifacts:
+  - `proof/run.log`
+  - `proof/run-screenshot.png`
+  - `proof/command-mapping.log`
+  - `proof/sidechannel-stats.log`
+  - `proof/README.md`
+
 ## Architecture (ASCII map)
 Intercom is a single long-running Pear process that participates in three distinct networking "planes":
 - **Subnet plane**: deterministic state replication (Autobase/Hyperbee over Hyperswarm/Protomux).

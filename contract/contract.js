@@ -39,26 +39,17 @@ class SampleContract extends Contract {
         // calling super and passing all parameters is required.
         super(protocol, options);
 
-        // simple function registration.
-        // since this function does not expect value payload, no need to sanitize.
-        // note that the function must match the type as set in Protocol.mapTxCommand()
-        this.addFunction('storeSomething');
-
-        // now we register the function with a schema to prevent malicious inputs.
-        // the contract uses the schema generator "fastest-validator" and can be found on npmjs.org.
-        //
-        // Since this is the "value" as of Protocol.mapTxCommand(), we must take it full into account.
-        // $$strict : true tells the validator for the object structure to be precise after "value".
-        //
-        // note that the function must match the type as set in Protocol.mapTxCommand()
-        this.addSchema('submitSomething', {
+        this.addSchema('syncReadinessPulseSigmalogistikutamaCollabIntercom', {
             value : {
                 $$strict : true,
                 $$type: "object",
                 op : { type : "string", min : 1, max: 128 },
-                some_key : { type : "string", min : 1, max: 128 }
+                area : { type : "string", min : 1, max: 128 },
+                readiness : { type : "enum", values : ["not_ready", "at_risk", "ready"] },
+                note : { type : "string", min : 1, max: 256 }
             }
         });
+        this.addFunction('peekReadinessPulseSigmalogistikutamaCollabIntercom');
 
         // in preparation to add an external Feature (aka oracle), we add a loose schema to make sure
         // the Feature key is given properly. it's not required, but showcases that even these can be
@@ -72,14 +63,6 @@ class SampleContract extends Contract {
         this.addFunction('readSnapshot');
         this.addFunction('readChatLast');
         this.addFunction('readTimer');
-        this.addSchema('readKey', {
-            value : {
-                $$strict : true,
-                $$type: "object",
-                op : { type : "string", min : 1, max: 128 },
-                key : { type : "string", min : 1, max: 256 }
-            }
-        });
 
         // now we are registering the timer feature itself (see /features/time/ in package).
         // note the naming convention for the feature name <feature-name>_feature.
@@ -114,116 +97,48 @@ class SampleContract extends Contract {
         });
     }
 
-    /**
-     * A simple contract function without values (=no parameters).
-     *
-     * Contract functions must be registered through either "this.addFunction" or "this.addSchema"
-     * or it won't execute upon transactions. "this.addFunction" does not sanitize values, so it should be handled with
-     * care or be used when no payload is to be expected.
-     *
-     * Schema is recommended to sanitize incoming data from the transaction payload.
-     * The type of payload data depends on your protocol.
-     *
-     * This particular function does not expect any payload, so it's fine to be just registered using "this.addFunction".
-     *
-     * However, as you can see below, what it does is checking if an entry for key "something" exists already.
-     * With the very first tx executing it, it will return "null" (default value of this.get if no value found).
-     * From the 2nd tx onwards, it will print the previously stored value "there is something".
-     *
-     * It is recommended to check for null existence before using put to avoid duplicate content.
-     *
-     * As a rule of thumb, all "this.put()" should go at the end of function execution to avoid code security issues.
-     *
-     * Putting data is atomic, should a Peer with a contract interrupt, the put won't be executed.
-     */
-    async storeSomething(){
-        const something = await this.get('something');
-
-        console.log('is there already something?', something);
-
-        if(null === something) {
-            await this.put('something', 'there is something');
+    async syncReadinessPulseSigmalogistikutamaCollabIntercom(){
+        const area = typeof this.value?.area === 'string' ? this.value.area.trim() : '';
+        const note = typeof this.value?.note === 'string' ? this.value.note.trim() : '';
+        const readiness = typeof this.value?.readiness === 'string' ? this.value.readiness : '';
+        if(area === '' || note === ''){
+            return new Error('area and note are required');
         }
+        if(readiness !== 'not_ready' && readiness !== 'at_risk' && readiness !== 'ready'){
+            return new Error('readiness must be not_ready, at_risk, or ready');
+        }
+
+        const readinessPulse = {
+            op: this.value.op,
+            area,
+            readiness,
+            note,
+            updatedBy: this.address,
+            updatedAt: await this.get('currentTime'),
+        };
+
+        await this.put('readiness_pulse_latest', readinessPulse);
+        console.log('readiness pulse synced', readinessPulse);
     }
 
-    /**
-     * Now we are using the schema-validated function defined in the constructor.
-     *
-     * The function also showcases some of the handy features like safe functions
-     * to prevent throws and safe bigint/decimal conversion.
-     */
-    async submitSomething(){
-        // the value of some_key shouldn't be empty, let's check that
-        if(this.value.some_key === ''){
-            return new Error('Cannot be empty');
-            // alternatively false for generic errors:
-            // return false;
-        }
-
-        // of course the same works with assert (always use this.assert)
-        this.assert(this.value.some_key !== '', new Error('Cannot be empty'));
-
-        // btw, please use safeBigInt provided by the contract protocol's superclass
-        // to calculate big integers:
-        const bigint = this.protocol.safeBigInt("1000000000000000000");
-
-        // making sure it didn't fail
-        this.assert(bigint !== null);
-
-        // you can also convert a bigint string into its decimal representation (as string)
-        const decimal = this.protocol.fromBigIntString(bigint.toString(), 18);
-
-        // and back into a bigint string
-        const bigint_string = this.protocol.toBigIntString(decimal, 18);
-
-        // let's clone the value
-        const cloned = this.protocol.safeClone(this.value);
-
-        // we want to pass the time from the timer feature.
-        // since mmodifications of this.value is not allowed, add this to the clone instead for storing:
-        cloned['timestamp'] = await this.get('currentTime');
-
-        // making sure it didn't fail (be aware of false-positives if null is passed to safeClone)
-        this.assert(cloned !== null);
-
-        // and now let's stringify the cloned value
-        const stringified = this.protocol.safeJsonStringify(cloned);
-
-        // and, you guessed it, best is to assert against null once more
-        this.assert(stringified !== null);
-
-        // and guess we are parsing it back
-        const parsed = this.protocol.safeJsonParse(stringified);
-
-        // parsing the json is a bit different: instead of null, we check against undefined:
-        this.assert(parsed !== undefined);
-
-        // finally we are storing what address submitted the tx and what the value was
-        await this.put('submitted_by/'+this.address, parsed.some_key);
-
-        // printing into the terminal works, too of course:
-        console.log('submitted by', this.address, parsed);
+    async peekReadinessPulseSigmalogistikutamaCollabIntercom(){
+        const readinessPulse = await this.get('readiness_pulse_latest');
+        console.log('readiness_pulse_latest:', readinessPulse);
     }
 
     async readSnapshot(){
-        const something = await this.get('something');
+        const readinessPulseLatest = await this.get('readiness_pulse_latest');
         const currentTime = await this.get('currentTime');
         const msgl = await this.get('msgl');
         const msg0 = await this.get('msg/0');
         const msg1 = await this.get('msg/1');
         console.log('snapshot', {
-            something,
+            readinessPulseLatest,
             currentTime,
             msgl: msgl ?? 0,
             msg0,
             msg1
         });
-    }
-
-    async readKey(){
-        const key = this.value?.key;
-        const value = key ? await this.get(key) : null;
-        console.log(`readKey ${key}:`, value);
     }
 
     async readChatLast(){

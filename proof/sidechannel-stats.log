@@ -1,0 +1,13 @@
+SC-Bridge sidechannel stats capture
+
+Command sent:
+{"type":"cli","command":"/sc_stats"}
+
+Runtime events:
+event:open
+recv:{"type":"hello","peer":"eb416247e903c0ee632a9a29e138d14e441181eee02607f45deae2d4515d3376","address":"trac1adqky3lfq0qwuce2ng57zwx3fezprq0wuqnq0azaat3dg52axdmqaaylx2","entryChannel":"0000intercom","filter":"","requiresAuth":true}
+send:{"type":"auth","token":"[redacted]"}
+recv:{"type":"auth_ok"}
+send:{"type":"cli","command":"/sc_stats"}
+recv:{"type":"cli_result","command":"/sc_stats","ok":true,"output":["{\"channels\":[\"0000intercom\",\"proof-pulse-room\"],\"connectionCount\":9}"],"error":null}
+
